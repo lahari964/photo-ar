@@ -1,0 +1,50 @@
+<h2>Design Comparison: AR Scanner</h2>
+<p class="subtitle">Mobile-first designs. Click a card to select your preference.</p>
+
+<div class="split" style="gap: 20px;">
+  
+  <!-- Option A: Minimalist -->
+  <div class="card" data-choice="minimalist" onclick="toggleSelect(this)" style="cursor: pointer;">
+    <div class="mockup" style="max-width: 350px; margin: 0 auto; box-shadow: none; border: 1px solid #eee;">
+      <div class="mockup-header">Option A: Clean / Minimalist</div>
+      <div class="mockup-body" style="background: url('https://images.unsplash.com/photo-1518770660439-4636190af475?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80') center/cover; height: 500px; position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+        
+        <!-- Subtle Reticle -->
+        <div style="width: 250px; height: 250px; border: 1px solid rgba(255,255,255,0.4); display: flex; align-items: center; justify-content: center;">
+          <div style="width: 20px; height: 2px; background: white; position: absolute; top: 125px; left: 40px;"></div>
+          <div style="width: 20px; height: 2px; background: white; position: absolute; top: 125px; right: 40px;"></div>
+          <div style="width: 2px; height: 20px; background: white; position: absolute; top: 40px; left: 175px;"></div>
+          <div style="width: 2px; height: 20px; background: white; position: absolute; bottom: 40px; left: 175px;"></div>
+        </div>
+
+        <div style="position: absolute; bottom: 40px; color: white; text-shadow: 0 1px 4px rgba(0,0,0,0.8); font-size: 14px;">
+          Find a photo to scan
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Option B: Glassmorphism -->
+  <div class="card" data-choice="glassmorphism" onclick="toggleSelect(this)" style="cursor: pointer;">
+    <div class="mockup" style="max-width: 350px; margin: 0 auto; box-shadow: none; border: 1px solid #eee;">
+      <div class="mockup-header">Option B: Glassmorphism</div>
+      <div class="mockup-body" style="background: url('https://images.unsplash.com/photo-1518770660439-4636190af475?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80') center/cover; height: 500px; position: relative; padding: 15px; display: flex; flex-direction: column; justify-content: space-between;">
+        
+        <!-- Top Bar -->
+        <div style="background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 15px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+          <span style="color: white; font-weight: bold;">Photo AR</span>
+          <span style="color: white; font-size: 11px; background: rgba(0,0,0,0.5); padding: 4px 8px; border-radius: 8px;">Scanning</span>
+        </div>
+
+        <!-- Bottom Dashboard -->
+        <div style="background: rgba(255, 255, 255, 0.15); backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 20px; padding: 15px;">
+          <p style="color: white; font-size: 13px; margin: 0 0 10px 0;">Hold camera steady over your photo album.</p>
+          <button style="width: 100%; padding: 10px; background: white; border: none; border-radius: 12px; font-weight: bold; color: #333;">Gallery (0)</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>
