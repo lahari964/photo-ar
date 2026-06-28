@@ -24,6 +24,7 @@ function App() {
         <ARViewer 
           targetSrc={activeAlbum.targetSrc}
           videoSrc={activeAlbum.videoSrc}
+          coverUrl={activeAlbum.coverUrl}
           onBack={() => setAppState('dashboard')} 
         />
       )}

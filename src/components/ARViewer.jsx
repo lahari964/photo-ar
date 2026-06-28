@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import 'aframe';
 import '../lib/mindar-image-aframe.prod.js';
 
-const ARViewer = ({ targetSrc, videoSrc, onBack }) => {
+const ARViewer = ({ targetSrc, videoSrc, coverUrl, onBack }) => {
   const [isReady, setIsReady] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isTracking, setIsTracking] = useState(false);
@@ -229,8 +229,13 @@ const ARViewer = ({ targetSrc, videoSrc, onBack }) => {
         </div>
         
         {!isTracking && (
-          <div className="pointer-events-auto bg-white/15 backdrop-blur-xl p-6 rounded-3xl border border-white/20 text-center shadow-lg mb-4 transition-all">
-            <p className="text-white font-semibold mb-1">Point at a photo</p>
+          <div className="pointer-events-auto bg-white/15 backdrop-blur-xl p-6 rounded-3xl border border-white/20 text-center shadow-lg mb-4 transition-all flex flex-col items-center">
+            {coverUrl && (
+              <div className="w-20 h-20 rounded-2xl overflow-hidden mb-4 border-2 border-white/30 shadow-[0_10px_20px_rgba(0,0,0,0.3)] bg-black">
+                 <img src={coverUrl} alt="Target Photo" className="w-full h-full object-cover" />
+              </div>
+            )}
+            <p className="text-white font-semibold mb-1">Point at this photo</p>
             <p className="text-gray-300 text-sm">{coachingMessage}</p>
           </div>
         )}
