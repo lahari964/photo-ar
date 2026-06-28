@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Camera, Plus, Image as ImageIcon, ChevronRight, Lock } from 'lucide-react';
+import { Camera, Plus, Image as ImageIcon, ChevronRight, ChevronLeft, Lock } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const albums = [
@@ -23,7 +23,7 @@ const albums = [
   }
 ];
 
-const Dashboard = ({ onSelectAlbum }) => {
+const Dashboard = ({ onSelectAlbum, onBack }) => {
   const [showToast, setShowToast] = useState(false);
 
   const handleUploadClick = () => {
@@ -40,19 +40,28 @@ const Dashboard = ({ onSelectAlbum }) => {
         <div className="absolute inset-0 opacity-[0.03] mix-blend-overlay" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.65%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22/%3E%3C/svg%3E")' }}></div>
       </div>
 
-      <div className="relative z-10 p-6 pt-16 safe-area-inset min-h-full flex flex-col">
+      <div className="relative z-10 p-6 pt-12 safe-area-inset min-h-full flex flex-col">
         
-        <header className="mb-10 flex justify-between items-end">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight mb-2 text-transparent bg-clip-text bg-gradient-to-r from-white to-white/60">My Gallery</h1>
-            <p className="text-gray-400 text-sm font-medium">Select an album to start scanning</p>
-          </div>
+        <header className="mb-8 flex flex-col gap-6">
           <button 
-            onClick={handleUploadClick}
-            className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center border border-white/20 active:scale-95 transition-transform"
+            onClick={onBack}
+            className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center border border-white/10 active:scale-95 transition-transform"
           >
-            <Plus className="w-6 h-6 text-white" />
+            <ChevronLeft className="w-5 h-5 text-white/70 -ml-1" />
           </button>
+
+          <div className="flex justify-between items-end">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight mb-2 text-transparent bg-clip-text bg-gradient-to-r from-white to-white/60">My Gallery</h1>
+              <p className="text-gray-400 text-sm font-medium">Select an album to start scanning</p>
+            </div>
+            <button 
+              onClick={handleUploadClick}
+              className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center border border-white/20 active:scale-95 transition-transform"
+            >
+              <Plus className="w-6 h-6 text-white" />
+            </button>
+          </div>
         </header>
 
         <div className="flex-1 space-y-4 pb-20">

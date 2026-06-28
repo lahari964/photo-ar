@@ -18,7 +18,7 @@ function App() {
         <Onboarding onComplete={() => setAppState('dashboard')} />
       )}
       {appState === 'dashboard' && (
-        <Dashboard onSelectAlbum={handleStartAR} />
+        <Dashboard onSelectAlbum={handleStartAR} onBack={() => setAppState('onboarding')} />
       )}
       {appState === 'ar' && activeAlbum && (
         <ARViewer 
