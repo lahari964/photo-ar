@@ -13,6 +13,7 @@
     "aframe": "^1.8.0",
     "framer-motion": "^12.42.0",
     "lucide-react": "^1.21.0",
+    "node-fetch": "^3.3.2",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
   },
