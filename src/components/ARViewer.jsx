@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { ChevronLeft, Volume2, VolumeX, Heart, Video, Square, CheckCircle, Loader2 } from 'lucide-react';
+import { ChevronLeft, Volume2, VolumeX, Heart, Video, Square, CheckCircle, Loader2, Share } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import 'aframe';
 import '../lib/mindar-image-aframe.prod.js';
@@ -9,6 +9,8 @@ const ARViewer = ({ targetSrc, videoSrc, coverUrl, onBack }) => {
   const [isMuted, setIsMuted] = useState(false);
   const [isTracking, setIsTracking] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [recordedBlob, setRecordedBlob] = useState(null);
+  const [isSharing, setIsSharing] = useState(false);
   const [showDownloadToast, setShowDownloadToast] = useState(false);
   const [isVideoBuffering, setIsVideoBuffering] = useState(false);
   const [coachingMessage, setCoachingMessage] = useState('Hold your camera steady to unlock the video');
@@ -17,6 +19,7 @@ const ARViewer = ({ targetSrc, videoSrc, coverUrl, onBack }) => {
   const mediaRecorderRef = useRef(null);
   const recordedChunksRef = useRef([]);
   const animationFrameRef = useRef(null);
+  const lastVibrationRef = useRef(0);
 
   const toggleMute = () => {
     const vid = document.querySelector('#vid');
@@ -27,6 +30,7 @@ const ARViewer = ({ targetSrc, videoSrc, coverUrl, onBack }) => {
   };
 
   const startRecording = () => {
+    setRecordedBlob(null);
     const videos = document.querySelectorAll('video');
     const webcam = Array.from(videos).find(v => v.id !== 'vid');
     const aframeCanvas = document.querySelector('.a-canvas');
@@ -101,21 +105,7 @@ const ARViewer = ({ targetSrc, videoSrc, coverUrl, onBack }) => {
       cancelAnimationFrame(animationFrameRef.current);
       const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
       recordedChunksRef.current = [];
-      const url = URL.createObjectURL(blob);
-      
-      const a = document.createElement('a');
-      a.style.display = 'none';
-      a.href = url;
-      a.download = `photo-ar-memory-${Date.now()}.webm`;
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(() => {
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        // Show success toast
-        setShowDownloadToast(true);
-        setTimeout(() => setShowDownloadToast(false), 4000);
-      }, 100);
+      setRecordedBlob(blob);
     };
 
     mediaRecorderRef.current.start();
@@ -132,6 +122,42 @@ const ARViewer = ({ targetSrc, videoSrc, coverUrl, onBack }) => {
   const toggleRecording = () => {
     if (isRecording) stopRecording();
     else startRecording();
+  };
+
+  const handleShare = async () => {
+    if (!recordedBlob) return;
+    setIsSharing(true);
+    try {
+      const file = new File([recordedBlob], `photo-ar-memory-${Date.now()}.webm`, { type: 'video/webm' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: 'My Photo AR Memory',
+        });
+        setRecordedBlob(null);
+      } else {
+        const url = URL.createObjectURL(recordedBlob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = file.name;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          setRecordedBlob(null);
+          setShowDownloadToast(true);
+          setTimeout(() => setShowDownloadToast(false), 4000);
+        }, 100);
+      }
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        console.error("Error sharing:", err);
+      }
+    } finally {
+      setIsSharing(false);
+    }
   };
 
   useEffect(() => {
@@ -160,6 +186,14 @@ const ARViewer = ({ targetSrc, videoSrc, coverUrl, onBack }) => {
           setIsTracking(true);
           setCoachingMessage('');
           clearTimeout(coachTimerRef.current);
+          
+          const now = Date.now();
+          if (now - lastVibrationRef.current > 2000) {
+            if ('vibrate' in navigator) {
+              navigator.vibrate(50);
+            }
+            lastVibrationRef.current = now;
+          }
           
           if (vid.readyState < 3) {
             setIsVideoBuffering(true);
@@ -240,6 +274,15 @@ const ARViewer = ({ targetSrc, videoSrc, coverUrl, onBack }) => {
           )}
           
           <div className="flex gap-2">
+            {recordedBlob && (
+              <button 
+                onClick={handleShare}
+                disabled={isSharing}
+                className="pointer-events-auto backdrop-blur-xl p-3 rounded-full border shadow-lg active:scale-95 transition-all bg-emerald-500/50 border-emerald-500 text-white"
+              >
+                {isSharing ? <Loader2 className="w-6 h-6 animate-spin" /> : <Share className="w-6 h-6" />}
+              </button>
+            )}
             <button 
               onClick={toggleRecording}
               className={`pointer-events-auto backdrop-blur-xl p-3 rounded-full border shadow-lg active:scale-95 transition-all ${isRecording ? 'bg-red-500/50 border-red-500 text-white' : 'bg-white/15 border-white/20 text-white'}`}
