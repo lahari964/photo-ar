@@ -12,6 +12,7 @@ const ARViewer = ({ targetSrc, videoSrc, coverUrl, onBack }) => {
   const [recordedBlob, setRecordedBlob] = useState(null);
   const [isSharing, setIsSharing] = useState(false);
   const [showDownloadToast, setShowDownloadToast] = useState(false);
+  const [showDownloadPrompt, setShowDownloadPrompt] = useState(false);
   const [isVideoBuffering, setIsVideoBuffering] = useState(false);
   const [coachingMessage, setCoachingMessage] = useState('Hold your camera steady to unlock the video');
   
@@ -136,20 +137,7 @@ const ARViewer = ({ targetSrc, videoSrc, coverUrl, onBack }) => {
         });
         setRecordedBlob(null);
       } else {
-        const url = URL.createObjectURL(recordedBlob);
-        const a = document.createElement('a');
-        a.style.display = 'none';
-        a.href = url;
-        a.download = file.name;
-        document.body.appendChild(a);
-        a.click();
-        setTimeout(() => {
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-          setRecordedBlob(null);
-          setShowDownloadToast(true);
-          setTimeout(() => setShowDownloadToast(false), 4000);
-        }, 100);
+        setShowDownloadPrompt(true);
       }
     } catch (err) {
       if (err.name !== 'AbortError') {
@@ -158,6 +146,31 @@ const ARViewer = ({ targetSrc, videoSrc, coverUrl, onBack }) => {
     } finally {
       setIsSharing(false);
     }
+  };
+
+  const confirmDownload = () => {
+    if (!recordedBlob) return;
+    const file = new File([recordedBlob], `photo-ar-memory-${Date.now()}.webm`, { type: 'video/webm' });
+    const url = URL.createObjectURL(recordedBlob);
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = url;
+    a.download = file.name;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      setRecordedBlob(null);
+      setShowDownloadPrompt(false);
+      setShowDownloadToast(true);
+      setTimeout(() => setShowDownloadToast(false), 4000);
+    }, 100);
+  };
+
+  const cancelDownload = () => {
+    setShowDownloadPrompt(false);
+    setRecordedBlob(null);
   };
 
   useEffect(() => {
@@ -334,6 +347,43 @@ const ARViewer = ({ targetSrc, videoSrc, coverUrl, onBack }) => {
               </div>
               <span className="font-semibold tracking-wide">Saved to internal storage</span>
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showDownloadPrompt && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-white/10 backdrop-blur-2xl border border-white/20 text-white p-6 rounded-[2rem] shadow-[0_20px_40px_rgba(0,0,0,0.5)] max-w-sm w-full text-center"
+            >
+              <h3 className="text-xl font-bold mb-2">Sharing Unavailable</h3>
+              <p className="text-gray-300 text-sm mb-6">
+                Your device doesn't support sharing videos directly. Would you like to download the video to your gallery instead?
+              </p>
+              <div className="flex flex-col space-y-3">
+                <button 
+                  onClick={confirmDownload}
+                  className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3 rounded-full transition-colors"
+                >
+                  Download Video
+                </button>
+                <button 
+                  onClick={cancelDownload}
+                  className="w-full bg-white/10 hover:bg-white/20 border border-white/10 text-white font-semibold py-3 rounded-full transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
