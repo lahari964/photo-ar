@@ -4,6 +4,15 @@ import { motion } from 'framer-motion';
 
 const albums = [
   {
+    id: 'lahari-paragliding',
+    title: 'Lahari Paragliding',
+    photosCount: 1,
+    coverUrl: '/lahari-paragliding.jpeg',
+    targetSrc: '/target.mind', // Pending update when the user provides the .mind file
+    videoSrc: '/lahari-paragliding.mp4',
+    isLocked: false,
+  },
+  {
     id: 'paris-trip',
     title: 'Paris Trip 2023',
     photosCount: 1,
