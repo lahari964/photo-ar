@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { ChevronLeft, Volume2, VolumeX, Heart, Video, Square, CheckCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import 'aframe';
-import 'mind-ar/dist/mindar-image-aframe.prod.js';
+import '../lib/mindar-image-aframe.prod.js';
 
 const ARViewer = ({ targetSrc, videoSrc, onBack }) => {
   const [isReady, setIsReady] = useState(false);
