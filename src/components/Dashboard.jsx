@@ -80,7 +80,21 @@ const Dashboard = ({ onSelectAlbum, onBack }) => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.1 }}
-              onClick={() => !album.isLocked && onSelectAlbum(album)}
+              onClick={() => {
+                if (album.isLocked) return;
+                
+                // Autoplay priming trick for iOS Safari
+                // Unlocks the browser's media engine synchronously within the user tap event
+                const primeVideo = document.createElement('video');
+                primeVideo.playsInline = true;
+                primeVideo.muted = true;
+                const playPromise = primeVideo.play();
+                if (playPromise !== undefined) {
+                  playPromise.catch(() => {}).then(() => primeVideo.pause());
+                }
+                
+                onSelectAlbum(album);
+              }}
               className={`relative overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 p-4 flex items-center space-x-4 transition-transform ${album.isLocked ? 'opacity-50 grayscale' : 'active:scale-[0.98] cursor-pointer shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_10px_30px_rgba(0,0,0,0.5)] hover:bg-white/10'}`}
             >
               <div className="w-24 h-24 rounded-2xl overflow-hidden flex-shrink-0 relative border border-white/10">

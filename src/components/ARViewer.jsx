@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { ChevronLeft, Volume2, VolumeX, Heart, Video, Square, CheckCircle } from 'lucide-react';
+import { ChevronLeft, Volume2, VolumeX, Heart, Video, Square, CheckCircle, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import 'aframe';
 import '../lib/mindar-image-aframe.prod.js';
@@ -10,6 +10,7 @@ const ARViewer = ({ targetSrc, videoSrc, coverUrl, onBack }) => {
   const [isTracking, setIsTracking] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [showDownloadToast, setShowDownloadToast] = useState(false);
+  const [isVideoBuffering, setIsVideoBuffering] = useState(false);
   const [coachingMessage, setCoachingMessage] = useState('Hold your camera steady to unlock the video');
   
   const coachTimerRef = useRef(null);
@@ -141,22 +142,48 @@ const ARViewer = ({ targetSrc, videoSrc, coverUrl, onBack }) => {
       const vid = document.querySelector('#vid');
 
       if (target && vid) {
+        let isCurrentlyTracking = false;
+
+        vid.addEventListener('waiting', () => setIsVideoBuffering(true));
+        vid.addEventListener('playing', () => {
+          setIsVideoBuffering(false);
+          if (isCurrentlyTracking) {
+             const arVideo = document.querySelector('#ar-video');
+             if (arVideo && arVideo.getAttribute('material').opacity === 0) {
+                 arVideo.emit('fadein');
+             }
+          }
+        });
+
         target.addEventListener('targetFound', () => {
+          isCurrentlyTracking = true;
           setIsTracking(true);
           setCoachingMessage('');
           clearTimeout(coachTimerRef.current);
           
+          if (vid.readyState < 3) {
+            setIsVideoBuffering(true);
+          }
+          
           vid.play().catch(e => console.error("Video play failed:", e));
           
-          const arVideo = document.querySelector('#ar-video');
-          if (arVideo) arVideo.emit('fadein');
+          if (vid.readyState >= 3) {
+            const arVideo = document.querySelector('#ar-video');
+            if (arVideo) arVideo.emit('fadein');
+          }
         });
         target.addEventListener('targetLost', () => {
+          isCurrentlyTracking = false;
           setIsTracking(false);
           vid.pause();
           
           const arVideo = document.querySelector('#ar-video');
-          if (arVideo) arVideo.emit('fadeout');
+          if (arVideo) {
+            arVideo.emit('fadeout');
+            setTimeout(() => { 
+              if (!isCurrentlyTracking) arVideo.setAttribute('material', 'opacity: 0'); 
+            }, 500);
+          }
           
           clearTimeout(coachTimerRef.current);
           setCoachingMessage('Hold your camera steady to unlock the video');
@@ -227,6 +254,15 @@ const ARViewer = ({ targetSrc, videoSrc, coverUrl, onBack }) => {
             </button>
           </div>
         </div>
+        
+        {/* Buffering Spinner Overlay */}
+        {isTracking && isVideoBuffering && (
+          <div className="absolute inset-0 flex items-center justify-center">
+             <div className="bg-black/50 backdrop-blur-md p-4 rounded-full border border-white/10 shadow-2xl">
+               <Loader2 className="w-8 h-8 text-white animate-spin" />
+             </div>
+          </div>
+        )}
         
         {!isTracking && (
           <div className="pointer-events-auto bg-white/15 backdrop-blur-xl p-6 rounded-3xl border border-white/20 text-center shadow-lg mb-4 transition-all flex flex-col items-center">

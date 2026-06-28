@@ -36,8 +36,24 @@ export default defineConfig({
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,mind,mp4}'],
-        maximumFileSizeToCacheInBytes: 10485760
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,mind}'],
+        maximumFileSizeToCacheInBytes: 10485760,
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) => url.pathname.match(/\.mp4$/i),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'ar-video-cache',
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60 * 24 * 7 // 7 days
+              },
+              cacheableResponse: {
+                statuses: [0, 200, 206]
+              }
+            }
+          }
+        ]
       }
     })
   ],
