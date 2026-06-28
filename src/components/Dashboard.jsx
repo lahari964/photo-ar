@@ -8,7 +8,7 @@ const albums = [
     title: 'Lahari Paragliding',
     photosCount: 1,
     coverUrl: '/lahari-paragliding.jpeg',
-    targetSrc: '/target.mind', // Pending update when the user provides the .mind file
+    targetSrc: '/lahari-paragliding.mind',
     videoSrc: '/lahari-paragliding.mp4',
     isLocked: false,
   },
