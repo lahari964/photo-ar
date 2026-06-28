@@ -4,8 +4,8 @@ import { motion } from 'framer-motion';
 
 const albums = [
   {
-    id: 'lahari-paragliding',
-    title: 'Lahari Paragliding',
+    id: 'manali-jan-2025',
+    title: 'Manali Jan 2025',
     photosCount: 1,
     coverUrl: '/lahari-paragliding.jpeg',
     targetSrc: '/lahari-paragliding.mind',
