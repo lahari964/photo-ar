@@ -45,8 +45,9 @@ const ARViewer = ({ targetSrc, videoSrc, coverUrl, onBack }) => {
     
     // EXTREMELY IMPORTANT FIX: Mobile screens have retina displays, meaning the canvas can be 3000x4000 pixels.
     // Trying to software-composite and real-time encode a 4K canvas in Javascript on a phone will cause severe stuttering.
-    // We must scale the recording canvas down to a max of 640 (standard SD) to guarantee smooth 30fps recording.
-    const MAX_WIDTH = 640;
+    // We must scale the recording canvas down to a max of 480 (standard mobile SD) 
+    // to guarantee smooth 30fps recording on Android devices without GPU stalling.
+    const MAX_WIDTH = 480;
     let scale = 1;
     if (aframeCanvas.width > MAX_WIDTH) {
       scale = MAX_WIDTH / aframeCanvas.width;
@@ -66,7 +67,10 @@ const ARViewer = ({ targetSrc, videoSrc, coverUrl, onBack }) => {
     compCanvas.style.zIndex = '-9999';
     document.body.appendChild(compCanvas);
 
-    const ctx = compCanvas.getContext('2d');
+    // alpha: false removes expensive transparency blending on the base layer
+    const ctx = compCanvas.getContext('2d', { alpha: false });
+    // Disable bilinear filtering to vastly speed up drawImage scaling on mobile GPUs
+    ctx.imageSmoothingEnabled = false;
 
     // Run compositor loop
     let lastTime = 0;
@@ -123,7 +127,8 @@ const ARViewer = ({ targetSrc, videoSrc, coverUrl, onBack }) => {
       }
     }
 
-    let options = { videoBitsPerSecond: 2500000 };
+    // Lower bitrate to 1.5 Mbps for 480p to reduce hardware encoder stress on Android
+    let options = { videoBitsPerSecond: 1500000 };
     if (MediaRecorder.isTypeSupported('video/mp4')) {
       options.mimeType = 'video/mp4'; // Hardware accelerated on iOS Safari
     } else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) {
