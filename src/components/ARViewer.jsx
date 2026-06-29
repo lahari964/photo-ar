@@ -45,8 +45,8 @@ const ARViewer = ({ targetSrc, videoSrc, coverUrl, onBack }) => {
     
     // EXTREMELY IMPORTANT FIX: Mobile screens have retina displays, meaning the canvas can be 3000x4000 pixels.
     // Trying to software-composite and real-time encode a 4K canvas in Javascript on a phone will cause severe stuttering.
-    // We must scale the recording canvas down to a max of 720p to guarantee a buttery smooth 30fps recording.
-    const MAX_WIDTH = 720;
+    // We must scale the recording canvas down to a max of 640 (standard SD) to guarantee smooth 30fps recording.
+    const MAX_WIDTH = 640;
     let scale = 1;
     if (aframeCanvas.width > MAX_WIDTH) {
       scale = MAX_WIDTH / aframeCanvas.width;
@@ -54,21 +54,49 @@ const ARViewer = ({ targetSrc, videoSrc, coverUrl, onBack }) => {
     
     compCanvas.width = aframeCanvas.width * scale;
     compCanvas.height = aframeCanvas.height * scale;
+    
+    // CRITICAL iOS BUG FIX: Safari WebKit aggressively throttles or completely stops rendering 
+    // to canvases that are not in the DOM, causing captureStream() to drop 90% of frames (slideshow effect).
+    // We must append it to the DOM and give it a > 0 opacity to trick the GPU into rendering it in real-time.
+    compCanvas.style.position = 'fixed';
+    compCanvas.style.top = '0';
+    compCanvas.style.left = '0';
+    compCanvas.style.opacity = '0.01'; // Must be > 0 for iOS
+    compCanvas.style.pointerEvents = 'none';
+    compCanvas.style.zIndex = '-9999';
+    document.body.appendChild(compCanvas);
+
     const ctx = compCanvas.getContext('2d');
 
     // Run compositor loop
-    const drawFrame = () => {
-      animationFrameRef.current = requestAnimationFrame(drawFrame);
+    let lastTime = 0;
+    let cachedDims = null;
 
-      const hRatio = compCanvas.width / webcam.videoWidth;
-      const vRatio = compCanvas.height / webcam.videoHeight;
-      const ratio = Math.max(hRatio, vRatio);
-      const centerShift_x = (compCanvas.width - webcam.videoWidth * ratio) / 2;
-      const centerShift_y = (compCanvas.height - webcam.videoHeight * ratio) / 2;
+    const drawFrame = (time) => {
+      animationFrameRef.current = requestAnimationFrame(drawFrame);
+      
+      // Throttle to exactly ~30fps to prevent overloading the mobile GPU
+      if (time - lastTime < 33) return;
+      lastTime = time;
+
+      // Cache the expensive matrix division math so it isn't recalculating 30 times a second
+      if (!cachedDims && webcam.videoWidth > 0) {
+        const hRatio = compCanvas.width / webcam.videoWidth;
+        const vRatio = compCanvas.height / webcam.videoHeight;
+        const ratio = Math.max(hRatio, vRatio);
+        cachedDims = {
+          vw: webcam.videoWidth,
+          vh: webcam.videoHeight,
+          cx: (compCanvas.width - webcam.videoWidth * ratio) / 2,
+          cy: (compCanvas.height - webcam.videoHeight * ratio) / 2,
+          dw: webcam.videoWidth * ratio,
+          dh: webcam.videoHeight * ratio
+        };
+      }
 
       ctx.clearRect(0, 0, compCanvas.width, compCanvas.height);
-      if (webcam.readyState >= 2) {
-        ctx.drawImage(webcam, 0, 0, webcam.videoWidth, webcam.videoHeight, centerShift_x, centerShift_y, webcam.videoWidth * ratio, webcam.videoHeight * ratio);
+      if (webcam.readyState >= 2 && cachedDims) {
+        ctx.drawImage(webcam, 0, 0, cachedDims.vw, cachedDims.vh, cachedDims.cx, cachedDims.cy, cachedDims.dw, cachedDims.dh);
       }
       
       ctx.drawImage(aframeCanvas, 0, 0, compCanvas.width, compCanvas.height);
@@ -114,6 +142,9 @@ const ARViewer = ({ targetSrc, videoSrc, coverUrl, onBack }) => {
 
     mediaRecorderRef.current.onstop = () => {
       cancelAnimationFrame(animationFrameRef.current);
+      if (document.body.contains(compCanvas)) {
+        document.body.removeChild(compCanvas);
+      }
       const mime = mediaRecorderRef.current.mimeType || 'video/webm';
       const blob = new Blob(recordedChunksRef.current, { type: mime });
       recordedChunksRef.current = [];
