@@ -4,6 +4,48 @@ import { motion, AnimatePresence } from 'framer-motion';
 import 'aframe';
 import '../lib/mindar-image-aframe.prod.js';
 
+if (typeof AFRAME !== 'undefined' && !AFRAME.components['webcam-background']) {
+  AFRAME.registerComponent('webcam-background', {
+    init: function () {
+      this.el.addEventListener('arReady', () => {
+        const video = document.querySelector('.mindar-ui-video') || Array.from(document.querySelectorAll('video')).find(v => v.id !== 'vid');
+        if (!video) return;
+
+        const THREE = AFRAME.THREE;
+        const texture = new THREE.VideoTexture(video);
+        texture.minFilter = THREE.LinearFilter;
+        texture.magFilter = THREE.LinearFilter;
+        texture.colorSpace = THREE.SRGBColorSpace;
+        
+        this.el.sceneEl.object3D.background = texture;
+        this.texture = texture;
+        this.video = video;
+        this.canvas = this.el.sceneEl.canvas;
+
+        this.updateMatrix = () => {
+          if (!this.video.videoWidth || !this.canvas.clientWidth) return;
+          const videoRatio = this.video.videoWidth / this.video.videoHeight;
+          const canvasRatio = this.canvas.clientWidth / this.canvas.clientHeight;
+          
+          this.texture.matrixAutoUpdate = false;
+          if (canvasRatio > videoRatio) {
+            this.texture.repeat.set(1, videoRatio / canvasRatio);
+            this.texture.offset.set(0, (1 - this.texture.repeat.y) / 2);
+          } else {
+            this.texture.repeat.set(canvasRatio / videoRatio, 1);
+            this.texture.offset.set((1 - this.texture.repeat.x) / 2, 0);
+          }
+          this.texture.updateMatrix();
+        };
+
+        video.addEventListener('loadeddata', this.updateMatrix);
+        window.addEventListener('resize', this.updateMatrix);
+        setTimeout(this.updateMatrix, 500);
+      });
+    }
+  });
+}
+
 const ARViewer = ({ targetSrc, videoSrc, coverUrl, onBack }) => {
   const [isReady, setIsReady] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -19,7 +61,6 @@ const ARViewer = ({ targetSrc, videoSrc, coverUrl, onBack }) => {
   const coachTimerRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const recordedChunksRef = useRef([]);
-  const animationFrameRef = useRef(null);
   const lastVibrationRef = useRef(0);
 
   const toggleMute = () => {
@@ -32,84 +73,14 @@ const ARViewer = ({ targetSrc, videoSrc, coverUrl, onBack }) => {
 
   const startRecording = () => {
     setRecordedBlob(null);
-    const videos = document.querySelectorAll('video');
-    const webcam = Array.from(videos).find(v => v.id !== 'vid');
     const aframeCanvas = document.querySelector('.a-canvas');
 
-    if (!webcam || !aframeCanvas) {
-      console.error("Could not find video or canvas for recording");
+    if (!aframeCanvas) {
+      console.error("Could not find canvas for recording");
       return;
     }
 
-    const compCanvas = document.createElement('canvas');
-    
-    // EXTREMELY IMPORTANT FIX: Mobile screens have retina displays, meaning the canvas can be 3000x4000 pixels.
-    // Trying to software-composite and real-time encode a 4K canvas in Javascript on a phone will cause severe stuttering.
-    // We must scale the recording canvas down to a max of 480 (standard mobile SD) 
-    // to guarantee smooth 30fps recording on Android devices without GPU stalling.
-    const MAX_WIDTH = 480;
-    let scale = 1;
-    if (aframeCanvas.width > MAX_WIDTH) {
-      scale = MAX_WIDTH / aframeCanvas.width;
-    }
-    
-    compCanvas.width = aframeCanvas.width * scale;
-    compCanvas.height = aframeCanvas.height * scale;
-    
-    // CRITICAL iOS BUG FIX: Safari WebKit aggressively throttles or completely stops rendering 
-    // to canvases that are not in the DOM, causing captureStream() to drop 90% of frames (slideshow effect).
-    // We must append it to the DOM and give it a > 0 opacity to trick the GPU into rendering it in real-time.
-    compCanvas.style.position = 'fixed';
-    compCanvas.style.top = '0';
-    compCanvas.style.left = '0';
-    compCanvas.style.opacity = '0.01'; // Must be > 0 for iOS
-    compCanvas.style.pointerEvents = 'none';
-    compCanvas.style.zIndex = '-9999';
-    document.body.appendChild(compCanvas);
-
-    // alpha: false removes expensive transparency blending on the base layer
-    const ctx = compCanvas.getContext('2d', { alpha: false });
-    // Disable bilinear filtering to vastly speed up drawImage scaling on mobile GPUs
-    ctx.imageSmoothingEnabled = false;
-
-    // Run compositor loop
-    let lastTime = 0;
-    let cachedDims = null;
-
-    const drawFrame = (time) => {
-      animationFrameRef.current = requestAnimationFrame(drawFrame);
-      
-      // Throttle to exactly ~30fps to prevent overloading the mobile GPU
-      if (time - lastTime < 33) return;
-      lastTime = time;
-
-      // Cache the expensive matrix division math so it isn't recalculating 30 times a second
-      if (!cachedDims && webcam.videoWidth > 0) {
-        const hRatio = compCanvas.width / webcam.videoWidth;
-        const vRatio = compCanvas.height / webcam.videoHeight;
-        const ratio = Math.max(hRatio, vRatio);
-        cachedDims = {
-          vw: webcam.videoWidth,
-          vh: webcam.videoHeight,
-          cx: (compCanvas.width - webcam.videoWidth * ratio) / 2,
-          cy: (compCanvas.height - webcam.videoHeight * ratio) / 2,
-          dw: webcam.videoWidth * ratio,
-          dh: webcam.videoHeight * ratio
-        };
-      }
-
-      ctx.clearRect(0, 0, compCanvas.width, compCanvas.height);
-      if (webcam.readyState >= 2 && cachedDims) {
-        ctx.drawImage(webcam, 0, 0, cachedDims.vw, cachedDims.vh, cachedDims.cx, cachedDims.cy, cachedDims.dw, cachedDims.dh);
-      }
-      
-      ctx.drawImage(aframeCanvas, 0, 0, compCanvas.width, compCanvas.height);
-    };
-    
-    // START THE LOOP (CRITICAL)
-    animationFrameRef.current = requestAnimationFrame(drawFrame);
-
-    const canvasStream = compCanvas.captureStream(30);
+    const canvasStream = aframeCanvas.captureStream(30);
     let finalStream = canvasStream;
     
     // Attempt to grab the audio track from the playing AR video
@@ -146,10 +117,6 @@ const ARViewer = ({ targetSrc, videoSrc, coverUrl, onBack }) => {
     };
 
     mediaRecorderRef.current.onstop = () => {
-      cancelAnimationFrame(animationFrameRef.current);
-      if (document.body.contains(compCanvas)) {
-        document.body.removeChild(compCanvas);
-      }
       const mime = mediaRecorderRef.current.mimeType || 'video/webm';
       const blob = new Blob(recordedChunksRef.current, { type: mime });
       recordedChunksRef.current = [];
@@ -298,7 +265,6 @@ const ARViewer = ({ targetSrc, videoSrc, coverUrl, onBack }) => {
     
     return () => {
       clearTimeout(coachTimerRef.current);
-      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
       if (isRecording && mediaRecorderRef.current) mediaRecorderRef.current.stop();
     };
   }, []);
@@ -440,9 +406,10 @@ const ARViewer = ({ targetSrc, videoSrc, coverUrl, onBack }) => {
       <a-scene
         mindar-image={`imageTargetSrc: ${targetSrc}; autoStart: true; uiScanning: no; filterMinCF: 0.0001; filterBeta: 0.001;`}
         color-space="sRGB"
-        renderer="colorManagement: true, physicallyCorrectLights"
+        renderer="colorManagement: true, physicallyCorrectLights, preserveDrawingBuffer: true, alpha: true"
         vr-mode-ui="enabled: false"
         device-orientation-permission-ui="enabled: false"
+        webcam-background
       >
         <a-assets>
           <video 
