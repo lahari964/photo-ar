@@ -95,8 +95,18 @@ const ARViewer = ({ targetSrc, videoSrc, coverUrl, onBack }) => {
       }
     }
 
-    // Standard bitrate for 720p is around 2.5 Mbps to maintain performance without stuttering
-    mediaRecorderRef.current = new MediaRecorder(finalStream, { mimeType: 'video/webm', videoBitsPerSecond: 2500000 });
+    let options = { videoBitsPerSecond: 2500000 };
+    if (MediaRecorder.isTypeSupported('video/mp4')) {
+      options.mimeType = 'video/mp4'; // Hardware accelerated on iOS Safari
+    } else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) {
+      options.mimeType = 'video/webm;codecs=vp9';
+    } else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) {
+      options.mimeType = 'video/webm;codecs=vp8';
+    } else {
+      options.mimeType = 'video/webm';
+    }
+
+    mediaRecorderRef.current = new MediaRecorder(finalStream, options);
     
     mediaRecorderRef.current.ondataavailable = (e) => {
       if (e.data.size > 0) recordedChunksRef.current.push(e.data);
@@ -104,7 +114,8 @@ const ARViewer = ({ targetSrc, videoSrc, coverUrl, onBack }) => {
 
     mediaRecorderRef.current.onstop = () => {
       cancelAnimationFrame(animationFrameRef.current);
-      const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
+      const mime = mediaRecorderRef.current.mimeType || 'video/webm';
+      const blob = new Blob(recordedChunksRef.current, { type: mime });
       recordedChunksRef.current = [];
       setRecordedBlob(blob);
     };
@@ -129,7 +140,8 @@ const ARViewer = ({ targetSrc, videoSrc, coverUrl, onBack }) => {
     if (!recordedBlob) return;
     setIsSharing(true);
     try {
-      const file = new File([recordedBlob], `photo-ar-memory-${Date.now()}.webm`, { type: 'video/webm' });
+      const ext = recordedBlob.type.includes('mp4') ? 'mp4' : 'webm';
+      const file = new File([recordedBlob], `photo-ar-memory-${Date.now()}.${ext}`, { type: recordedBlob.type });
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({
           files: [file],
@@ -150,7 +162,8 @@ const ARViewer = ({ targetSrc, videoSrc, coverUrl, onBack }) => {
 
   const confirmDownload = () => {
     if (!recordedBlob) return;
-    const file = new File([recordedBlob], `photo-ar-memory-${Date.now()}.webm`, { type: 'video/webm' });
+    const ext = recordedBlob.type.includes('mp4') ? 'mp4' : 'webm';
+    const file = new File([recordedBlob], `photo-ar-memory-${Date.now()}.${ext}`, { type: recordedBlob.type });
     const url = URL.createObjectURL(recordedBlob);
     const a = document.createElement('a');
     a.style.display = 'none';
